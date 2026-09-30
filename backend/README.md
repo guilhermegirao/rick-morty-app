@@ -25,6 +25,12 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## BFF endpoint
+
+`GET /episodes/:id/characters` returns the episode metadata and complete character objects sorted alphabetically by name. The BFF turns the episode's character URLs into one batched request to `/character/:ids`, avoiding an upstream request per character.
+
+Responses are cached in Redis for five minutes. Set `REDIS_URL` to configure the Redis connection; the default is `redis://localhost:6379`.
+
 ## Project setup
 
 ```bash

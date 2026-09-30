@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
+import { EpisodesService } from './../src/episodes.service.js';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -10,7 +11,35 @@ describe('AppController (e2e)', () => {
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(EpisodesService)
+      .useValue({
+        getEpisodeCharacters: vi.fn().mockResolvedValue({
+          id: 28,
+          name: 'The Ricklantis Mixup',
+          air_date: 'September 10, 2017',
+          episode: 'S03E07',
+          characters: [
+            {
+              id: 1,
+              name: 'Rick Sanchez',
+              status: 'Alive',
+              species: 'Human',
+              type: '',
+              gender: 'Male',
+              origin: { name: 'Earth', url: '' },
+              location: { name: 'Earth', url: '' },
+              image: 'https://example.com/1.png',
+              episode: [],
+              url: 'https://example.com/character/1',
+              created: '2017-11-04T18:48:46.250Z',
+            },
+          ],
+          url: 'https://rickandmortyapi.com/api/episode/28',
+          created: '2017-11-10T12:56:36.618Z',
+        }),
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
@@ -21,6 +50,22 @@ describe('AppController (e2e)', () => {
       .get('/')
       .expect(200)
       .expect('Hello World!');
+  });
+
+  it('/episodes/28/characters (GET)', () => {
+    return request(app.getHttpServer())
+      .get('/episodes/28/characters')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.id).toBe(28);
+        expect(body.characters[0].name).toBe('Rick Sanchez');
+      });
+  });
+
+  it('/episodes/not-an-id/characters (GET)', () => {
+    return request(app.getHttpServer())
+      .get('/episodes/not-an-id/characters')
+      .expect(400);
   });
 
   afterEach(async () => {
