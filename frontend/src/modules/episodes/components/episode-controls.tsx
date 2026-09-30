@@ -37,7 +37,6 @@ export function EpisodeControls({
               name="episode"
               aria-describedby={error ? "episode-error" : undefined}
               aria-invalid={Boolean(error)}
-              min="1"
               onChange={(event) => onEpisodeIdChange(event.target.value)}
               type="number"
               value={episodeId}
