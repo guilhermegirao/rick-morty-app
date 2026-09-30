@@ -73,6 +73,80 @@ describe('EpisodesService', () => {
       [2, 1],
     );
     expect(cache.set).toHaveBeenCalledTimes(3);
+    expect(cache.set).toHaveBeenCalledWith(
+      'episode:28',
+      episode,
+      86_400,
+    );
+    expect(cache.set).toHaveBeenCalledWith(
+      'character:2',
+      characters[0],
+      86_400,
+    );
+    expect(cache.set).toHaveBeenCalledWith(
+      'character:1',
+      characters[1],
+      86_400,
+    );
+  });
+
+  it('returns an empty character list without fetching characters', async () => {
+    const emptyEpisode = { ...episode, characters: [] };
+    const cache = {
+      get: vi.fn().mockResolvedValue(null),
+      getMany: vi.fn().mockResolvedValue([]),
+      set: vi.fn().mockResolvedValue(undefined),
+    };
+    const thirdPartyClient = {
+      getEpisode: vi.fn().mockResolvedValue(emptyEpisode),
+      getCharacters: vi.fn(),
+    };
+
+    const result = await new EpisodesService(
+      cache,
+      thirdPartyClient,
+    ).getEpisodeCharacters(28);
+
+    expect(result.characters).toEqual([]);
+    expect(thirdPartyClient.getCharacters).not.toHaveBeenCalled();
+  });
+
+  it('deduplicates duplicate character references before fetching', async () => {
+    const duplicateEpisode = {
+      ...episode,
+      characters: [episode.characters[0], episode.characters[0], episode.characters[1]],
+    };
+    const cache = {
+      get: vi.fn().mockResolvedValue(null),
+      getMany: vi.fn().mockResolvedValue([null, null]),
+      set: vi.fn().mockResolvedValue(undefined),
+    };
+    const thirdPartyClient = {
+      getEpisode: vi.fn().mockResolvedValue(duplicateEpisode),
+      getCharacters: vi.fn().mockResolvedValue(characters),
+    };
+
+    await new EpisodesService(cache, thirdPartyClient).getEpisodeCharacters(28);
+
+    expect(thirdPartyClient.getCharacters).toHaveBeenCalledWith([2, 1]);
+  });
+
+  it('rejects malformed episode character URLs', async () => {
+    const malformedEpisode = { ...episode, characters: ['not-a-url'] };
+    const cache = {
+      get: vi.fn().mockResolvedValue(null),
+      getMany: vi.fn(),
+      set: vi.fn(),
+    };
+    const thirdPartyClient = {
+      getEpisode: vi.fn().mockResolvedValue(malformedEpisode),
+      getCharacters: vi.fn(),
+    };
+
+    await expect(
+      new EpisodesService(cache, thirdPartyClient).getEpisodeCharacters(28),
+    ).rejects.toBeInstanceOf(BadGatewayException);
+    expect(cache.getMany).not.toHaveBeenCalled();
   });
 
   it('uses cached characters without calling the vendor for them', async () => {
