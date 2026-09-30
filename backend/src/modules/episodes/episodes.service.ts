@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { RedisCacheService } from './redis-cache.service.js';
+import { CacheService } from '../../shared/cache/cache.service.js';
 
 const API_BASE_URL = 'https://rickandmortyapi.com/api';
 const CACHE_TTL_SECONDS = 300;
@@ -47,7 +47,7 @@ export type CacheStore = {
 @Injectable()
 export class EpisodesService {
   constructor(
-    @Inject(RedisCacheService) private readonly cache: CacheStore,
+    @Inject(CacheService) private readonly cache: CacheStore,
   ) {}
 
   async getEpisodeCharacters(

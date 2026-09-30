@@ -50,6 +50,14 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## Run with Docker
+
+```bash
+docker compose up --build
+```
+
+The BFF is available at `http://localhost:3000`. Redis data is persisted in the `redis_data` Compose volume. Copy `.env.example` to `.env` when setting up another environment; the included `.env` is configured for the Compose Redis service.
+
 ## Run tests
 
 ```bash

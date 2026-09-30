@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { Redis } from 'ioredis';
 
 @Injectable()
-export class RedisCacheService implements OnModuleDestroy {
-  private readonly logger = new Logger(RedisCacheService.name);
+export class CacheService implements OnModuleDestroy {
+  private readonly logger = new Logger(CacheService.name);
   private readonly client: Redis;
   private connectionPromise: Promise<void> | undefined;
 
