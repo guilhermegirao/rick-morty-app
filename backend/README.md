@@ -1,140 +1,223 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Rick and Morty BFF
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+The backend is a NestJS backend-for-frontend (BFF) for episode character data. It hides the upstream Rick and Morty API response shape, resolves character references, caches vendor records in Redis, validates external payloads, and exposes a small frontend-oriented contract.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Stack
 
-## Description
+- NestJS 12 with TypeScript 6 and the Express adapter
+- Zod for runtime validation of vendor payloads
+- Redis 8 through `ioredis` for episode and character caching
+- Swagger/OpenAPI through `@nestjs/swagger`
+- Vitest and Supertest for unit and HTTP-level tests
+- Oxlint for type-aware linting
+- Docker Compose for local Redis
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Requirements
 
-## BFF endpoint
+- Node.js compatible with the repository toolchain
+- npm
+- Docker Desktop if using the Redis Compose service
+- Access to the Rick and Morty API, unless a compatible test double is used
 
-`GET /episodes/:id/characters` returns episode metadata and a lean character representation sorted alphabetically by name. The BFF removes upstream URLs and timestamps, and converts character episode URLs into numeric episode IDs.
-
-Responses are cached in Redis for 24 hours. Set `REDIS_URL` to configure the Redis connection; the default is `redis://localhost:6379`.
-
-Interactive OpenAPI documentation is available at `http://localhost:3000/docs` when the backend is running.
-
-## Project setup
+## Setup
 
 ```bash
-$ npm install
+cd backend
+npm install
+Copy-Item .env.example .env
 ```
 
-## Compile and run the project
+On macOS/Linux, use `cp .env.example .env` instead of `Copy-Item`.
+
+The default environment expects Redis at `redis://localhost:6379` and the vendor API at `https://rickandmortyapi.com/api`.
+
+Start Redis:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+docker compose up -d redis
 ```
 
-## Run with Docker
+Start the API in watch mode:
 
 ```bash
-docker compose up --build
+npm run start:dev
 ```
 
-The BFF is available at `http://localhost:3000`. Redis data is persisted in the `redis_data` Compose volume. Copy `.env.example` to `.env` when setting up another environment; the included `.env` is configured for the Compose Redis service.
+The API is available at `http://localhost:3000`.
 
-## Run tests
+## Environment
+
+The supported variables are:
+
+```env
+PORT=3000
+REDIS_URL=redis://localhost:6379
+REDIS_PASSWORD=
+RICK_AND_MORTY_API_URL=https://rickandmortyapi.com/api
+CORS_ORIGIN=http://localhost:3001
+```
+
+- `PORT` controls the HTTP port.
+- `REDIS_URL` selects the Redis connection. The cache service falls back to its local default when it is not configured.
+- `REDIS_PASSWORD` supplies an optional Redis password.
+- `RICK_AND_MORTY_API_URL` configures the upstream vendor base URL and is required by the vendor client.
+- `CORS_ORIGIN` is a comma-separated allowlist of browser origins. Localhost ports `3000` and `3001`, plus their `127.0.0.1` equivalents, are allowed by the bootstrap defaults.
+
+## Commands
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run start        # start once
+npm run start:dev    # watch mode
+npm run start:prod   # run compiled dist/main.js
+npm run build        # compile the Nest application
+npm run lint         # type-aware Oxlint
+npm run format       # format source and test files
+npm run test         # unit tests
+npm run test:e2e     # HTTP-level tests
+npm run test:cov     # coverage report
 ```
 
-## Deployment
+## Docker
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+The Compose file currently provisions Redis with persistent storage and a health check. The application service definition is intentionally commented so the API can run directly from the host during development:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker compose up -d redis
+npm run start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+The Redis data volume is named `redis_data`. To run the full application in Docker, enable the app service in `docker-compose.yml`, build the image, and provide the required environment values.
 
-## Observability
+## Public API
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+### `GET /episodes/:id/characters`
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+Returns one episode and its normalized character collection.
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-To add it to this project:
+Example:
 
 ```bash
-$ npm install @nestjs/observe
+curl http://localhost:3000/episodes/28/characters
 ```
 
-Then follow the [setup guide](https://docs.nestjs.com/observability/overview) - it takes a single import and an app key.
+The response contains:
 
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
+```json
+{
+  "id": 28,
+  "name": "The Ricklantis Mixup",
+  "air_date": "September 10, 2017",
+  "episode": "S03E07",
+  "characters": [
+    {
+      "id": 1,
+      "name": "Rick Sanchez",
+      "status": "Alive",
+      "species": "Human",
+      "type": "",
+      "gender": "Male",
+      "origin": "Earth",
+      "location": "Earth",
+      "image": "https://rickandmortyapi.com/api/character/avatar/1.jpeg",
+      "episodes": [1, 2, 3]
+    }
+  ]
+}
+```
 
-## Resources
+The BFF removes vendor URLs and timestamps, flattens `origin` and `location` to names, converts character episode references to numeric IDs, and sorts characters case-insensitively by name.
 
-Check out a few resources that may come in handy when working with NestJS:
+Responses use these error semantics:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+- `404`: the requested episode does not exist
+- `400`: the route parameter is not a valid integer
+- `502`: the upstream vendor fails, returns invalid data, or returns an invalid reference
 
-## Support
+Interactive Swagger documentation is available at `http://localhost:3000/docs`. The raw OpenAPI document is available at `/docs-json`.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Architecture
 
-## Stay in touch
+The backend is organized into two boundaries:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```text
+HTTP request
+  -> EpisodesController
+  -> EpisodesService
+  -> CacheService
+  -> RickAndMortyClient
+  -> Rick and Morty API
+  -> EpisodesMapper / DTO response
+```
 
-## License
+### App and shared infrastructure
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+`AppModule` loads global configuration and composes the shared and episodes modules. The bootstrap configures CORS, Swagger, graceful shutdown hooks, and the HTTP port.
+
+`SharedModule` owns infrastructure that is not specific to episodes, including Redis cache access and the upstream vendor client.
+
+### Episodes module
+
+The episodes module owns the frontend-facing use case:
+
+- The controller parses the episode ID and exposes the route.
+- The service reads and writes episode and character cache entries, extracts and deduplicates character IDs, resolves missing characters, sorts the result, and invokes the mapper.
+- DTOs describe the serialized public contract for Swagger.
+- The mapper is an anti-corruption boundary between vendor models and the BFF response.
+
+### Vendor client
+
+The Rick and Morty client owns upstream communication and validation:
+
+- Builds URLs from `RICK_AND_MORTY_API_URL`.
+- Validates episodes and characters with Zod.
+- Maps an upstream episode 404 to `NotFoundException`.
+- Maps dependency failures and malformed data to `BadGatewayException`.
+- Retries network failures and HTTP `408`, `429`, and `5xx` responses up to three total attempts.
+- Uses bounded exponential backoff, jitter, and a bounded `Retry-After` value.
+
+## Caching Strategy
+
+The episodes service caches complete vendor records under separate keys:
+
+- `episode:<id>` for episode metadata and character URLs
+- `character:<id>` for vendor character records
+
+Entries use a 24-hour TTL. Character IDs are deduplicated before fetching, so repeated references in an episode do not create redundant vendor requests. Missing characters may be fetched concurrently.
+
+Cache failures fail open: a Redis outage can increase vendor traffic and latency, but should not turn a readable upstream response into a cache-only failure.
+
+## Architectural Tradeoffs
+
+### Individual character requests instead of vendor batch requests
+
+The client requests one character resource per ID, potentially concurrently. This avoids coupling the application to batch URL limits and keeps each request shape simple. The tradeoff is more upstream requests for episodes with large casts. The decision is recorded in `docs/adr/0001-individual-character-requests.md`.
+
+### Redis cache instead of a database
+
+Redis is appropriate for mostly static vendor data and keeps the implementation small. Separate episode and character keys maximize reuse across episodes. The tradeoff is that the cache is not the system of record and requires an operational Redis dependency.
+
+### Fail-open cache behavior
+
+The API prioritizes availability when Redis is unavailable. The tradeoff is increased upstream load during cache failures and less predictable latency.
+
+## Testing Strategy
+
+Tests target public behavior at the highest useful boundary:
+
+- Episode service tests use cache and vendor doubles to verify cache hits/misses, deduplication, sorting, mapping, missing data, and invalid references.
+- Vendor client tests mock `fetch` to verify URL construction, retries, 404 behavior, malformed payload handling, and upstream failures.
+- E2E tests verify Nest wiring, route parsing, HTTP serialization, and invalid route handling.
+- Build validation checks TypeScript and decorators.
+- Lint runs with type-aware Oxlint.
+
+The frontend currently validates with `npm run lint` and `npm run build`. Its planned test seam is the public episode explorer interaction boundary with the BFF adapter mocked.
+
+## Operational Notes
+
+- Start Redis before the API when running locally.
+- Start the backend before the frontend so the initial server-rendered episode can load.
+- Allow the frontend origin through `CORS_ORIGIN` in non-local environments.
+- Keep `RICK_AND_MORTY_API_URL` configured in every deployment.
+- Inspect `/docs` and `/docs-json` when changing the public contract.
+
+See the detailed backend specs under `docs/specs/` and the accepted request-strategy ADR under `docs/adr/`.
