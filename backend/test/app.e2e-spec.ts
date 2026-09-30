@@ -27,16 +27,12 @@ describe('AppController (e2e)', () => {
               species: 'Human',
               type: '',
               gender: 'Male',
-              origin: { name: 'Earth', url: '' },
-              location: { name: 'Earth', url: '' },
+              origin: 'Earth',
+              location: 'Earth',
               image: 'https://example.com/1.png',
-              episode: [],
-              url: 'https://example.com/character/1',
-              created: '2017-11-04T18:48:46.250Z',
+              episodes: [1],
             },
           ],
-          url: 'https://rickandmortyapi.com/api/episode/28',
-          created: '2017-11-10T12:56:36.618Z',
         }),
       })
       .compile();
@@ -59,6 +55,9 @@ describe('AppController (e2e)', () => {
       .expect(({ body }) => {
         expect(body.id).toBe(28);
         expect(body.characters[0].name).toBe('Rick Sanchez');
+        expect(body.characters[0].episodes).toEqual([1]);
+        expect(body.url).toBeUndefined();
+        expect(body.characters[0].url).toBeUndefined();
       });
   });
 

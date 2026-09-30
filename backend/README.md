@@ -27,9 +27,11 @@
 
 ## BFF endpoint
 
-`GET /episodes/:id/characters` returns the episode metadata and complete character objects sorted alphabetically by name. The BFF turns the episode's character URLs into one batched request to `/character/:ids`, avoiding an upstream request per character.
+`GET /episodes/:id/characters` returns episode metadata and a lean character representation sorted alphabetically by name. The BFF removes upstream URLs and timestamps, and converts character episode URLs into numeric episode IDs.
 
-Responses are cached in Redis for five minutes. Set `REDIS_URL` to configure the Redis connection; the default is `redis://localhost:6379`.
+Responses are cached in Redis for 24 hours. Set `REDIS_URL` to configure the Redis connection; the default is `redis://localhost:6379`.
+
+Interactive OpenAPI documentation is available at `http://localhost:3000/docs` when the backend is running.
 
 ## Project setup
 

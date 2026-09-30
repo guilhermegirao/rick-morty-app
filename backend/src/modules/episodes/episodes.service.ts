@@ -9,12 +9,12 @@ import type {
   Character,
   Episode,
 } from '../../shared/third-party/rick-and-morty/rick-and-morty.schemas.js';
+import {
+  toEpisodeCharactersResponse,
+  type EpisodeCharactersResponse,
+} from './episodes.mapper.js';
 
 const CACHE_TTL_SECONDS = 86_400;
-
-export type EpisodeCharactersResponse = Omit<Episode, 'characters'> & {
-  characters: Character[];
-};
 
 export type CacheStore = {
   get<T>(key: string): Promise<T | null>;
@@ -80,16 +80,13 @@ export class EpisodesService {
         ),
       ),
     );
-    const response = {
-      ...episode,
-      characters: characters.sort((first, second) =>
+    characters.sort((first, second) =>
         first.name.localeCompare(second.name, undefined, {
           sensitivity: 'base',
         }),
-      ),
-    };
+      );
 
-    return response;
+    return toEpisodeCharactersResponse(episode, characters);
   }
 
   private getCharacterId(characterUrl: string): number {

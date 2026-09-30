@@ -1,14 +1,16 @@
 ## Problem Statement
 
-The frontend needs to display every character that appears in a specific Rick and Morty episode, ordered alphabetically by character name. The upstream episode resource exposes characters as individual URLs, so resolving them one at a time creates an N+1 request pattern, increases latency, and couples the UI to upstream API composition details.
+> Status: Current BFF contract
+
+The frontend needs to display every character that appears in a specific Rick and Morty episode, ordered alphabetically by character name. The upstream episode resource exposes characters as individual URLs. The BFF intentionally resolves those references individually to avoid depending on vendor batch URL limits; the resulting increase in upstream request count is an accepted tradeoff recorded in the ADR.
 
 The backend also needs to remain available when the optional cache is unavailable and must distinguish a missing episode from an upstream service failure.
 
 ## Solution
 
-Provide a backend-for-frontend endpoint that accepts an episode ID, resolves the episode's character references through individual Rick and Morty API requests, sorts the complete character resources alphabetically by name, and returns the episode metadata with the resolved characters.
+Provide a backend-for-frontend endpoint that accepts an episode ID, resolves the episode's character references through individual Rick and Morty API requests, shapes the character resources for the UI, sorts them alphabetically by name, and returns the episode metadata with the resolved characters.
 
-Cache the assembled response for a short time through the shared cache service. Redis is the current cache implementation, but episode logic depends on the generic cache contract rather than Redis-specific naming or behavior.
+Cache episode metadata and individual character records independently for 24 hours through the shared cache service. Redis is the current cache implementation, but episode logic depends on the generic cache contract rather than Redis-specific naming or behavior.
 
 The endpoint is the highest testing seam: HTTP behavior, response shape, individual-request effects, cache behavior, validation, and error status mapping should be observable through the public endpoint wherever practical.
 
@@ -16,7 +18,7 @@ The endpoint is the highest testing seam: HTTP behavior, response shape, individ
 
 1. As a UI consumer, I want to request the characters for an episode by episode ID, so that I can render the episode's cast from one backend endpoint.
 2. As a UI consumer, I want the response to include the episode's identifying metadata, so that I can render the episode context alongside its characters.
-3. As a UI consumer, I want complete character resources, so that the UI can display names, images, status, species, origin, location, and other character details without additional upstream calls.
+3. As a UI consumer, I want the character fields needed by the UI, so that it does not depend on upstream URLs or timestamps.
 4. As a UI consumer, I want characters sorted alphabetically by name, so that the list is predictable and easy to scan.
 5. As a UI consumer, I want sorting to be case-insensitive, so that capitalization does not produce surprising ordering.
 6. As a UI consumer, I want an episode with no characters to return an empty character list, so that the UI can render an empty state without special error handling.
@@ -40,10 +42,11 @@ The endpoint is the highest testing seam: HTTP behavior, response shape, individ
 ## Implementation Decisions
 
 - The backend exposes an episode-characters HTTP endpoint identified by episode ID.
-- The endpoint returns episode metadata and a `characters` array containing complete character resources.
+- The endpoint returns episode metadata and a lean `characters` array without upstream URLs or timestamps.
 - Character references are converted to IDs and sent as individual upstream requests.
+- Character response fields include flattened `origin` and `location` names and an `episodes` array of numeric IDs.
 - The response is sorted by character name using case-insensitive comparison.
-- The assembled response is cached for a bounded TTL through a generic cache contract.
+- Episode metadata and individual character records are cached for 24 hours through a generic cache contract.
 - Redis is the current cache adapter and is configured through application configuration. Redis failures are fail-open for request handling and are logged for operations.
 - The episodes module owns episode routing and orchestration.
 - The shared module owns reusable infrastructure, including the generic cache service.
@@ -51,7 +54,7 @@ The endpoint is the highest testing seam: HTTP behavior, response shape, individ
 - A cache miss fetches the episode, resolves characters, sorts the result, stores it, and returns it.
 - An upstream episode 404 maps to HTTP 404. Other upstream transport, status, parsing, shape, or URL errors map to HTTP 502.
 - Invalid route IDs are rejected at the HTTP boundary with HTTP 400.
-- Complete character validation requires the fields needed to preserve the upstream character resource contract, including identity, classification, related resources, image, episode references, URL, and creation timestamp.
+- Character response shaping preserves identity, classification, related resource names, image, and episode IDs while removing upstream URLs and creation timestamps.
 - Application shutdown hooks are enabled so shared resources can close during graceful shutdown.
 - Duplicate character reference handling should deduplicate IDs before requesting characters to avoid redundant upstream work.
 
@@ -76,5 +79,4 @@ The endpoint is the highest testing seam: HTTP behavior, response shape, individ
 - Real-time episode or character updates.
 - Manual cache invalidation APIs.
 - Replacing Redis with another production cache provider.
-- Retrying failed upstream requests beyond the configured HTTP client behavior.
 - Supporting arbitrary upstream APIs with different episode or character schemas.

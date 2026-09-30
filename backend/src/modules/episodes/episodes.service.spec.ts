@@ -25,7 +25,10 @@ const characters = [
     origin: { name: 'Earth', url: '' },
     location: { name: 'Earth', url: '' },
     image: 'https://example.com/2.png',
-    episode: [],
+    episode: [
+      'https://rickandmortyapi.com/api/episode/2',
+      'https://rickandmortyapi.com/api/episode/1',
+    ],
     url: 'https://example.com/character/2',
     created: '2017-11-04T18:50:21.651Z',
   },
@@ -39,7 +42,7 @@ const characters = [
     origin: { name: 'Earth', url: '' },
     location: { name: 'Earth', url: '' },
     image: 'https://example.com/1.png',
-    episode: [],
+    episode: ['https://rickandmortyapi.com/api/episode/1'],
     url: 'https://example.com/character/1',
     created: '2017-11-04T18:48:46.250Z',
   },
@@ -88,7 +91,38 @@ describe('EpisodesService', () => {
       thirdPartyClient,
     ).getEpisodeCharacters(28);
 
-    expect(result).toEqual({ ...episode, characters });
+    expect(result).toEqual({
+      id: 28,
+      name: 'The Ricklantis Mixup',
+      air_date: 'September 10, 2017',
+      episode: 'S03E07',
+      characters: [
+        {
+          id: 2,
+          name: 'Morty Smith',
+          status: 'Alive',
+          species: 'Human',
+          type: '',
+          gender: 'Male',
+          origin: 'Earth',
+          location: 'Earth',
+          image: 'https://example.com/2.png',
+          episodes: [2, 1],
+        },
+        {
+          id: 1,
+          name: 'Rick Sanchez',
+          status: 'Alive',
+          species: 'Human',
+          type: '',
+          gender: 'Male',
+          origin: 'Earth',
+          location: 'Earth',
+          image: 'https://example.com/1.png',
+          episodes: [1],
+        },
+      ],
+    });
     expect(thirdPartyClient.getEpisode).not.toHaveBeenCalled();
     expect(thirdPartyClient.getCharacters).not.toHaveBeenCalled();
   });
@@ -115,6 +149,25 @@ describe('EpisodesService', () => {
     ]);
     expect(thirdPartyClient.getCharacters).toHaveBeenCalledWith([1]);
     expect(cache.set).toHaveBeenCalledOnce();
+  });
+
+  it('rejects malformed character episode URLs', async () => {
+    const cache = {
+      get: vi.fn().mockResolvedValue(episode),
+      getMany: vi.fn().mockResolvedValue([
+        { ...characters[0], episode: ['not-a-url'] },
+        characters[1],
+      ]),
+      set: vi.fn(),
+    };
+    const thirdPartyClient = {
+      getEpisode: vi.fn(),
+      getCharacters: vi.fn(),
+    };
+
+    await expect(
+      new EpisodesService(cache, thirdPartyClient).getEpisodeCharacters(28),
+    ).rejects.toBeInstanceOf(BadGatewayException);
   });
 
   it('propagates upstream not found and gateway errors', async () => {
