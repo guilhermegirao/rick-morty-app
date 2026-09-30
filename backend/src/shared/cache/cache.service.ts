@@ -12,6 +12,7 @@ export class CacheService implements OnModuleDestroy {
     this.client = new Redis(
       configService.get<string>('REDIS_URL') ?? 'redis://localhost:6379',
       {
+        password: configService.get<string>('REDIS_PASSWORD') || undefined,
         lazyConnect: true,
         maxRetriesPerRequest: 0,
         retryStrategy: () => null,
@@ -30,6 +31,24 @@ export class CacheService implements OnModuleDestroy {
     } catch {
       this.logger.debug(`Redis cache read failed for key ${key}`);
       return null;
+    }
+  }
+
+  async getMany<T>(keys: string[]): Promise<Array<T | null>> {
+    if (keys.length === 0) {
+      return [];
+    }
+
+    try {
+      await this.connect();
+      const values = await this.client.mget(keys);
+
+      return values.map((value) =>
+        value ? (JSON.parse(value) as T) : null,
+      );
+    } catch {
+      this.logger.debug(`Redis cache read failed for ${keys.length} keys`);
+      return keys.map(() => null);
     }
   }
 

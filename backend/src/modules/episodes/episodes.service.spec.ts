@@ -46,9 +46,10 @@ const characters = [
 ];
 
 describe('EpisodesService', () => {
-  it('sorts characters and caches the assembled response', async () => {
+  it('sorts characters and caches fresh character records', async () => {
     const cache = {
       get: vi.fn().mockResolvedValue(null),
+      getMany: vi.fn().mockResolvedValue([null, null]),
       set: vi.fn().mockResolvedValue(undefined),
     };
     const thirdPartyClient = {
@@ -68,13 +69,13 @@ describe('EpisodesService', () => {
     expect(thirdPartyClient.getCharacters).toHaveBeenCalledWith(
       [2, 1],
     );
-    expect(cache.set).toHaveBeenCalledOnce();
+    expect(cache.set).toHaveBeenCalledTimes(3);
   });
 
-  it('returns cached data without calling the third-party client', async () => {
-    const cachedResponse = { ...episode, characters };
+  it('uses cached characters without calling the vendor for them', async () => {
     const cache = {
-      get: vi.fn().mockResolvedValue(cachedResponse),
+      get: vi.fn().mockResolvedValue(episode),
+      getMany: vi.fn().mockResolvedValue(characters),
       set: vi.fn(),
     };
     const thirdPartyClient = {
@@ -87,13 +88,41 @@ describe('EpisodesService', () => {
       thirdPartyClient,
     ).getEpisodeCharacters(28);
 
-    expect(result).toEqual(cachedResponse);
+    expect(result).toEqual({ ...episode, characters });
     expect(thirdPartyClient.getEpisode).not.toHaveBeenCalled();
     expect(thirdPartyClient.getCharacters).not.toHaveBeenCalled();
   });
 
+  it('fetches and caches only missing characters', async () => {
+    const cache = {
+      get: vi.fn().mockResolvedValue(episode),
+      getMany: vi.fn().mockResolvedValue([characters[0], null]),
+      set: vi.fn().mockResolvedValue(undefined),
+    };
+    const thirdPartyClient = {
+      getEpisode: vi.fn().mockResolvedValue(episode),
+      getCharacters: vi.fn().mockResolvedValue([characters[1]]),
+    };
+
+    const result = await new EpisodesService(
+      cache,
+      thirdPartyClient,
+    ).getEpisodeCharacters(28);
+
+    expect(result.characters.map((character) => character.name)).toEqual([
+      'Morty Smith',
+      'Rick Sanchez',
+    ]);
+    expect(thirdPartyClient.getCharacters).toHaveBeenCalledWith([1]);
+    expect(cache.set).toHaveBeenCalledOnce();
+  });
+
   it('propagates upstream not found and gateway errors', async () => {
-    const cache = { get: vi.fn().mockResolvedValue(null), set: vi.fn() };
+    const cache = {
+      get: vi.fn().mockResolvedValue(null),
+      getMany: vi.fn().mockResolvedValue([]),
+      set: vi.fn(),
+    };
     const notFoundClient = {
       getEpisode: vi.fn().mockRejectedValue(new NotFoundException()),
       getCharacters: vi.fn(),
